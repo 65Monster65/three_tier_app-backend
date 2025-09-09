@@ -13,12 +13,12 @@ phases:
       - IMAGE_TAG=$COMMIT_HASH
   build:
     commands:
-      - echo Building the backend Docker image...
+      - echo "Building the backend Docker image..."
       - docker build -t $ECR_REPO:latest .
       - docker tag $ECR_REPO:latest $ECR_REPO:$IMAGE_TAG
   post_build:
     commands:
-      - echo Pushing Docker images...
+      - echo "Pushing Docker images..."
       - docker push $ECR_REPO:latest
       - docker push $ECR_REPO:$IMAGE_TAG
       - echo "Backend image pushed: $ECR_REPO:$IMAGE_TAG"
