@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO
+  build:
+    commands:
+      - echo Building the backend Docker image...
+      - docker build -t $ECR_REPO:latest .
+      - docker push $ECR_REPO:latest
+  post_build:
+    commands:
+      - echo "Backend image pushed: $ECR_REPO:latest"
+
+artifacts:
+  files:
+    - '**/*'
