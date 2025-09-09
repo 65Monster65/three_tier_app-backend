@@ -1,5 +1,5 @@
 #stage 1
-FROM python:3.9-slim
+FROM public.ecr.aws/docker/library/python:3.9-slim
 
 # Install system packages
 RUN apt-get update && \
