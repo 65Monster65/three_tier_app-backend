@@ -3,10 +3,22 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      - echo "Pre-build step works"
+      - echo "Logging in to Amazon ECR..."
+      - echo "AWS Region: $AWS_DEFAULT_REGION"
+      - echo "ECR Repository: $ECR_REPO"
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - echo "Using commit hash $COMMIT_HASH"
   build:
     commands:
-      - echo "Build step works"
+      - echo "Building the backend Docker image..."
+      - docker build -t $ECR_REPO:latest -t $ECR_REPO:$COMMIT_HASH .
+      - docker push $ECR_REPO:latest
+      - docker push $ECR_REPO:$COMMIT_HASH
   post_build:
     commands:
-      - echo "Post-build step works"
+      - echo "Backend image pushed successfully to $ECR_REPO with tags: latest and $COMMIT_HASH"
+
+artifacts:
+  files:
+    - '**/*'
