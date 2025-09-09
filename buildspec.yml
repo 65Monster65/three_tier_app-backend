@@ -1,24 +1,38 @@
 version: 0.2
 
+env:
+  secrets-manager:
+    ACCOUNT_ID: "backend-env:ACCOUNT_ID"
+    IMAGE_REPO_NAME: "backend-env:IMAGE_REPO_NAME"
+    AWS_DEFAULT_REGION: "backend-env:AWS_DEFAULT_REGION"
+    CONTAINER_NAME: "backend-env:CONTAINER_NAME"
+
+
 phases:
   pre_build:
     commands:
+      - echo "ACCOUNT_ID=$ACCOUNT_ID, REGION=$AWS_DEFAULT_REGION"
+      - REPOSITORY_URI=${ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${IMAGE_REPO_NAME}
       - echo "Logging in to Amazon ECR..."
-      - echo "AWS Region: $AWS_DEFAULT_REGION"
-      - echo "ECR Repository: $ECR_REPO"
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO
+      - aws --version
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - echo "Using commit hash $COMMIT_HASH"
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
   build:
     commands:
-      - echo "Building the backend Docker image..."
-      - docker build -t $ECR_REPO:latest -t $ECR_REPO:$COMMIT_HASH .
-      - docker push $ECR_REPO:latest
-      - docker push $ECR_REPO:$COMMIT_HASH
+      - echo "Build started on $(date)"
+      - echo "Building backend Docker image..."
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
   post_build:
     commands:
-      - echo "Backend image pushed successfully to $ECR_REPO with tags: latest and $COMMIT_HASH"
+      - echo "Build completed on $(date)"
+      - echo "Pushing backend Docker images..."
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo "Writing imagedefinitions.json..."
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
 
 artifacts:
   files:
-    - '**/*'
+    - imagedefinitions.json
